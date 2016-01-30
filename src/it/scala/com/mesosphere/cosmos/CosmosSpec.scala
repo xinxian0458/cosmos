@@ -1,6 +1,8 @@
 package com.mesosphere.cosmos
 
 import com.netaporter.uri.Uri
+import com.netaporter.uri.dsl.stringToUriDsl
+import com.netaporter.uri.dsl.stringToUri
 import com.twitter.app.{FlagParseException, FlagUsageError, Flags}
 import com.twitter.finagle.http.RequestBuilder
 import com.twitter.finagle.http.RequestConfig.Yes
@@ -38,7 +40,10 @@ trait CosmosSpec extends Matchers with TableDrivenPropertyChecks {
   protected[this] val servicePort: Int = 8081
 
   protected[this] final def requestBuilder(endpointPath: String): RequestBuilder[Yes, Nothing] = {
-    RequestBuilder().url(s"http://localhost:$servicePort/$endpointPath")
+    RequestBuilder().url((s"http://localhost:$servicePort" / endpointPath).toString)
   }
 
+  protected[this] final def baseUri: Uri = {
+    s"http://localhost:$servicePort"
+  }
 }

@@ -129,15 +129,21 @@ private[cosmos] final class Cosmos(
           Output.failure(ce, ce.status).withContentType(Some(MediaTypes.ErrorResponse.show))
         case fe: io.finch.Error =>
           stats.counter(s"finchError/${sanitiseClassName(fe.getClass)}").incr()
-          Output.failure(fe, Status.BadRequest).withContentType(Some(MediaTypes.ErrorResponse.show))
+          Output.failure(fe, Status.BadRequest).withContentType(
+            Some(MediaTypes.ErrorResponse.show)
+          )
         case e: Exception if !e.isInstanceOf[io.finch.Error] =>
           stats.counter(s"unhandledException/${sanitiseClassName(e.getClass)}").incr()
           logger.warn("Unhandled exception: ", e)
-          Output.failure(e, Status.InternalServerError).withContentType(Some(MediaTypes.ErrorResponse.show))
+          Output.failure(e, Status.InternalServerError).withContentType(
+            Some(MediaTypes.ErrorResponse.show)
+          )
         case t: Throwable if !t.isInstanceOf[io.finch.Error] =>
           stats.counter(s"unhandledThrowable/${sanitiseClassName(t.getClass)}").incr()
           logger.warn("Unhandled throwable: ", t)
-          Output.failure(new Exception(t), Status.InternalServerError).withContentType(Some(MediaTypes.ErrorResponse.show))
+          Output.failure(new Exception(t), Status.InternalServerError).withContentType(
+            Some(MediaTypes.ErrorResponse.show)
+          )
       }
       .toService
   }
