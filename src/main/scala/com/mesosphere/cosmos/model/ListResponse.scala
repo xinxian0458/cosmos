@@ -3,7 +3,7 @@ package com.mesosphere.cosmos.model
 import io.circe.Json
 
 case class ListResponse(
-  packages: Seq[Installation]
+  packages: Option[List[Installation]]
 )
 
 case class Installation(

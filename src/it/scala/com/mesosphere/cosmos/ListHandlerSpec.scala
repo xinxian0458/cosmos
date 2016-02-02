@@ -1,6 +1,8 @@
 package com.mesosphere.cosmos
 
+import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicInteger
 
 import com.netaporter.uri.dsl.stringToUri
 import com.twitter.finagle.Service
@@ -8,44 +10,50 @@ import com.twitter.finagle.http.Request
 import com.twitter.finagle.http.Response
 import com.twitter.finagle.http.Status
 import com.twitter.util.Await
+import org.apache.commons.io.FileUtils
 import org.scalatest.Matchers
 import org.scalatest.Outcome
 import org.scalatest.fixture
 
+import com.mesosphere.cosmos.circe.Decoders.decodeInstallResponse
 import com.mesosphere.cosmos.circe.Decoders.decodeListResponse
+import com.mesosphere.cosmos.circe.Decoders.decodeUninstallResponse
+import com.mesosphere.cosmos.circe.Encoders.encodeInstallRequest
 import com.mesosphere.cosmos.circe.Encoders.encodeListRequest
-import com.mesosphere.cosmos.model.ListRequest
-import com.mesosphere.cosmos.model.ListResponse
+import com.mesosphere.cosmos.circe.Encoders.encodeUninstallRequest
 
 final class ListHandlerSpec extends fixture.FlatSpec with Matchers {
 
   case class FixtureParam(service: Service[Request, Response])
 
+  private[this] val baseUri = "http://localhost"
+
   override def withFixture(test: OneArgTest): Outcome = {
     // Create temporary folder
-    val tempDir = Files.createTempDirectory("cosmos-ListHandlerSpec").toFile
-    val absolutePath = tempDir.getAbsolutePath
-    //logger.info("Setting com.mesosphere.cosmos.universeCacheDir={}", absolutePath)
-    System.setProperty("com.mesosphere.cosmos.universeCacheDir", absolutePath)
+    val tempPath = Files.createTempDirectory("cosmos-ListHandlerSpec")
 
-    // Install a bunch of services
-
+    val service = Cosmos.service(dcosHost(), universeBundleUri(), tempPath)
 
     try {
-      super.withFixture(test.toNoArgTest(FixtureParam(Cosmos.service)))
+      super.withFixture(test.toNoArgTest(FixtureParam(service)))
     } finally {
-      // Uninstall a bunch of services
       // Delete the temporary folder
-      val _ = tempDir.delete()
+      val _ = FileUtils.deleteQuietly(tempPath.toFile)
     }
   }
 
-  val baseUri = "http://localhost"
-
   it should "list all services" in { fixture =>
     val client = PackageClient(fixture.service, baseUri)
-    val response = Await.result(client.list(ListRequest()))
-    response shouldBe ListResponse(Nil)
+    Await.result(client.install(model.InstallRequest("marathon")))
+    Await.result(client.install(model.InstallRequest("chronos")))
+    val response = Await.result(client.list(model.ListRequest()))
+    println(response)
+
+    // TODO: Uninstall a bunch of services
+    Await.result(client.uninstall(model.UninstallRequest("marathon", None, None)))
+    Await.result(client.uninstall(model.UninstallRequest("chronos", None, None)))
+
+    response shouldBe model.ListResponse(None)
   }
 
   it should "list by package name" in { service =>

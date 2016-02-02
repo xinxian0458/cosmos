@@ -62,7 +62,7 @@ final class UserOptionsSpec extends UnitSpec {
           new PackageImportHandler,
           EndpointHandler.const(DescribeResponse(packageFiles.packageJson, packageFiles.marathonJsonMustache)),
           EndpointHandler.const(ListVersionsResponse(Map.empty)),
-          EndpointHandler.const(ListResponse(Nil))
+          EndpointHandler.const(ListResponse(Some(Nil)))
         )
         val request = RequestBuilder()
           .url("http://dummy.cosmos.host/v1/package/install")

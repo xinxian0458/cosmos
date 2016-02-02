@@ -1,5 +1,7 @@
 package com.mesosphere.cosmos
 
+import com.netaporter.uri.Uri
+import java.nio.file.Path
 import com.mesosphere.cosmos.handler._
 import com.mesosphere.cosmos.http.MediaTypes
 import com.mesosphere.cosmos.model._
@@ -161,15 +163,20 @@ private[cosmos] final class Cosmos(
 }
 
 object Cosmos extends FinchServer {
-  def service = {
-    val host = dcosHost()
+  def service: Service[Request, Response] = {
+    service(dcosHost(), universeBundleUri(), universeCacheDir())
+  }
+
+  def service(
+    host: Uri,
+    universeBundle: Uri,
+    universeDir: Path
+  ): Service[Request, Response] = {
     logger.info("Connecting to DCOS Cluster at: {}", host.toStringRaw)
 
     val boot = Services.adminRouterClient(host) map { dcosClient =>
       val adminRouter = new AdminRouter(host, dcosClient)
 
-      val universeBundle = universeBundleUri()
-      val universeDir = universeCacheDir()
       val packageCache = Await.result(UniversePackageCache(universeBundle, universeDir))
       val marathonPackageRunner = new MarathonPackageRunner(adminRouter)
 

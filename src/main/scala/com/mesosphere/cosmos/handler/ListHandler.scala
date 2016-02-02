@@ -55,7 +55,7 @@ final class ListHandler(
           }
         }
       } map { installation =>
-        ListResponse(installation.flatten)
+        ListResponse(Some(installation.flatten.toList))
       }
     }
   }
