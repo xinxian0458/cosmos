@@ -28,18 +28,21 @@ private[cosmos] abstract class EndpointHandler[Request, Response]
   } yield req
 
   private val printer: Printer = Printer.noSpaces.copy(dropNullKeys = true, preserveOrder = true)
-  lazy val encodeResponseType: EncodeResponse[Response] =
-    EncodeResponse.fromString[Response](produces.show, produces.parameters.flatMap(_.get("charset"))) { response =>
+  lazy val encodeResponseType: EncodeResponse[Response] = {
+    EncodeResponse.fromString[Response](
+      produces.show,
+      produces.parameters.flatMap(_.get("charset"))
+    ) { response =>
       printer.pretty(encoder(response))
     }
-
+  }
 }
 
 object EndpointHandler {
 
   /**
-    * Create an endpoint that will always return `resp` regardless of what request is sent to it.  Really only useful
-    * for bootstrapping tests.
+    * Create an endpoint that will always return `resp` regardless of what request is sent to it.
+    * Really only useful for bootstrapping tests.
     */
   def const[Request, Response](resp: Response)(implicit
     decoder: DecodeRequest[Request],
