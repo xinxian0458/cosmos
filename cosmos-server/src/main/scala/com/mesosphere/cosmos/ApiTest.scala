@@ -1,136 +1,15 @@
 package com.mesosphere.cosmos
 
-import scala.collection.generic.IsTraversableOnce
-import scala.language.higherKinds
-import scala.reflect.ClassTag
-
-import cats.std.list.listInstance
 import com.netaporter.uri.Uri
 import io.circe.Json
 import io.circe.JsonObject
-import shapeless.::
-import shapeless.HList
-import shapeless.HNil
-import shapeless.LabelledGeneric
-import shapeless.LabelledGeneric.Aux
-import shapeless.Lazy
-import shapeless.Witness
-import shapeless.labelled.FieldType
-import shapeless.ops.record.Keys
 
+import com.mesosphere.cosmos.http.MediaTypes
 import com.mesosphere.cosmos.model.PackageRepository
 import com.mesosphere.cosmos.model.PackageRepositoryListRequest
 import com.mesosphere.cosmos.model.PackageRepositoryListResponse
-import com.mesosphere.cosmos.http.MediaTypes
-
-trait Schemafier[T] { parent =>
-  def schema: JsonObject
-
-  final def as[U]: Schemafier[U] = new Schemafier[U] {
-    override final def schema: JsonObject = parent.schema
-  }
-
-  final def withTitle(title: String): Schemafier[T] = new Schemafier[T] {
-    override final def schema: JsonObject = {
-      parent.schema + ("title", Json.string(title))
-    }
-  }
-
-  final def withDescription(description: String): Schemafier[T] = new Schemafier[T] {
-    override final def schema: JsonObject = {
-      parent.schema + ("description", Json.string(description))
-    }
-  }
-}
-
-object Schemafier {
-  implicit final def schemafyString[T <: String]: Schemafier[T] = new Schemafier[T] {
-    override final def schema: JsonObject = {
-      JsonObject.empty + ("type", Json.string("string"))
-    }
-  }
-
-  implicit final def schemafyInt[T <: Int]: Schemafier[T] = new Schemafier[T] {
-    override final def schema: JsonObject = {
-      JsonObject.empty + ("type", Json.string("integer"))
-    }
-  }
-
-  implicit final def schemafyTraversableOnce[T, R[_]](
-    implicit
-    schemafier: Schemafier[T],
-    isTraversable: IsTraversableOnce[R[T]] { type A = T }
-  ): Schemafier[R[T]] = new Schemafier[R[T]] {
-    override final def schema: JsonObject = {
-      JsonObject.empty +
-      ("type", Json.string("array")) +
-      ("items", Json.fromJsonObject(schemafier.schema))
-    }
-  }
-}
-
-trait ObjectSchemafier[T] extends Schemafier[T] { parent =>
-  val properties: List[(String, Schemafier[_])]
-
-  override final def schema: JsonObject = {
-    val jsonProperties = properties.map { case (field, schemafier) =>
-      (field, Json.fromJsonObject(schemafier.schema))
-    }
-
-    JsonObject.empty +
-    ("type", Json.string("object")) +
-    ("properties", Json.fromFields(jsonProperties))
-  }
-
-  final def decorateProperties(
-    decorator: PartialFunction[(String, Schemafier[_]), Schemafier[_]]
-  ): ObjectSchemafier[T] = {
-    new ObjectSchemafier[T] {
-      val properties = parent.properties.map { case (field, schemafier) =>
-        (field, decorator.orElse(default)((field, schemafier)))
-      }
-    }
-  }
-
-  private final val default: PartialFunction[(String, Schemafier[_]), Schemafier[_]] = {
-    case (_, schemafier) => schemafier
-  }
-}
-
-object ObjectSchemafier {
-  implicit final val schemafyHNil: ObjectSchemafier[HNil] = {
-    new ObjectSchemafier[HNil] {
-      override final val properties: List[(String, Schemafier[_])] = List.empty
-    }
-  }
-
-  implicit final def schemafyLabelledHList[K <: Symbol, V, T <: HList](
-    implicit
-    key: Witness.Aux[K],
-    headSchemafier: Schemafier[V],
-    tailSchemafier: ObjectSchemafier[T]
-  ): ObjectSchemafier[FieldType[K, V] :: T] = {
-    new ObjectSchemafier[FieldType[K, V] :: T] {
-      override final val properties: List[(String, Schemafier[_])] = {
-        (key.value.name, headSchemafier) :: tailSchemafier.properties
-      }
-    }
-  }
-
-  implicit final def schemafyCaseClass[T, R <: HList](
-    implicit
-    gen: Aux[T, R],
-    hListSchemafier: ObjectSchemafier[R]
-  ): ObjectSchemafier[T] = {
-    new ObjectSchemafier[T] {
-      val properties = hListSchemafier.properties
-    }
-  }
-
-  final def deriveFor[T](implicit objectSchemafier: ObjectSchemafier[T]): ObjectSchemafier[T] = {
-    objectSchemafier
-  }
-}
+import com.mesosphere.cosmos.raml.Schemafier
+import com.mesosphere.cosmos.raml.ObjectSchemafier
 
 object ApiTest extends App {
   case class World(w: Int, o: String, r: Int)
