@@ -4,16 +4,28 @@ import java.nio.ByteBuffer
 import java.util.Base64
 
 import cats.data.Ior
+import com.netaporter.uri.Uri
+import com.twitter.finagle.http.Status
+import io.circe.generic.semiauto._
+import io.circe.Encoder
+import io.circe.Json
+import io.circe.JsonObject
+import io.circe.ObjectEncoder
+import io.circe.syntax.EncoderOps
+import io.finch.Error
+
 import com.mesosphere.cosmos._
+import com.mesosphere.cosmos.http.MediaType
 import com.mesosphere.cosmos.model._
 import com.mesosphere.cosmos.model.thirdparty.marathon._
 import com.mesosphere.cosmos.model.thirdparty.mesos.master._
+import com.mesosphere.cosmos.raml.Body
+import com.mesosphere.cosmos.raml.DataType
+import com.mesosphere.cosmos.raml.Document
+import com.mesosphere.cosmos.raml.Method
+import com.mesosphere.cosmos.raml.Response
+import com.mesosphere.cosmos.raml.{Resource => RamlResource}
 import com.mesosphere.universe._
-import com.netaporter.uri.Uri
-import io.circe.generic.semiauto._
-import io.circe.syntax._
-import io.circe.{Encoder, Json, JsonObject, ObjectEncoder}
-import io.finch.Error
 
 object Encoders {
   implicit val encodeLicense: Encoder[License] = deriveFor[License].encoder
@@ -136,6 +148,46 @@ object Encoders {
   implicit val encodeByteBuffer: Encoder[ByteBuffer] = Encoder.instance { bb =>
     Base64.getEncoder.encodeToString(ByteBuffers.getBytes(bb)).asJson
   }
+
+  // RAML decoders
+
+  implicit val encodeDocument: Encoder[Document] = ObjectEncoder.instance { document =>
+    JsonObject.fromMap {
+      document.resources.mapValues(_.asJson) + (("title", document.title.asJson))
+    }
+  }
+
+  implicit val encodeRamlResource: Encoder[RamlResource] = deriveFor[RamlResource].encoder
+
+  implicit val encodeMethod: Encoder[Method] = ObjectEncoder.instance { method =>
+    JsonObject.fromMap {
+      method.responses.map { case (status, response) =>
+        (status.code.toString, response.asJson)
+      } + (
+        ("body", method.body.asJson)
+      ) + (
+        ("description", method.description.asJson)
+      )
+    }
+  }
+
+  implicit val encodeBody: Encoder[Body] = ObjectEncoder.instance { body =>
+    JsonObject.fromMap {
+      body.content.map { case (mediaType, dataType) =>
+        (mediaType.show, dataType.asJson)
+      }
+    }
+  }
+
+  implicit val encodeStatus: Encoder[Status] = Encoder.instance(_.code.toString.asJson)
+
+  implicit val encodeDataType: Encoder[DataType] = ???
+
+  implicit val encodeResponse: Encoder[Response] = ???
+
+
+
+  // Helpers methods
 
   private[this] def exceptionErrorResponse(t: Throwable): ErrorResponse = t match {
     case Error.NotPresent(item) =>

@@ -5,6 +5,7 @@ import scala.language.higherKinds
 
 import io.circe.Json
 import io.circe.JsonObject
+import cats.implicits.listInstance
 
 
 trait Schemafier[T] { parent =>
@@ -30,13 +31,13 @@ trait Schemafier[T] { parent =>
 object Schemafier {
   implicit final def schemafyString[T <: String]: Schemafier[T] = new Schemafier[T] {
     override final def schema: JsonObject = {
-      JsonObject.empty + ("type", Json.string("string"))
+      JsonObject.singleton("type", Json.string("string"))
     }
   }
 
   implicit final def schemafyInt[T <: Int]: Schemafier[T] = new Schemafier[T] {
     override final def schema: JsonObject = {
-      JsonObject.empty + ("type", Json.string("integer"))
+      JsonObject.singleton("type", Json.string("integer"))
     }
   }
 
@@ -46,9 +47,12 @@ object Schemafier {
     isTraversable: IsTraversableOnce[R[T]] { type A = T }
   ): Schemafier[R[T]] = new Schemafier[R[T]] {
     override final def schema: JsonObject = {
-      JsonObject.empty +
-      ("type", Json.string("array")) +
-      ("items", Json.fromJsonObject(schemafier.schema))
+      JsonObject.from(
+        List(
+          ("type", Json.string("array")),
+          ("items", Json.fromJsonObject(schemafier.schema))
+        )
+      )
     }
   }
 }

@@ -1,15 +1,23 @@
 package com.mesosphere.cosmos
 
-import com.netaporter.uri.Uri
 import io.circe.Json
 import io.circe.JsonObject
+import com.twitter.finagle.http.Status
 
 import com.mesosphere.cosmos.http.MediaTypes
 import com.mesosphere.cosmos.model.PackageRepository
 import com.mesosphere.cosmos.model.PackageRepositoryListRequest
 import com.mesosphere.cosmos.model.PackageRepositoryListResponse
-import com.mesosphere.cosmos.raml.Schemafier
 import com.mesosphere.cosmos.raml.ObjectSchemafier
+import com.mesosphere.cosmos.raml.Schemafiers.PackageRepositoryListRequestSchemafier
+import com.mesosphere.cosmos.raml.Schemafiers.PackageRepositoryListResponseSchemafier
+import com.mesosphere.cosmos.raml.Schemafier
+import com.mesosphere.cosmos.raml.Document
+import com.mesosphere.cosmos.raml.Resource
+import com.mesosphere.cosmos.raml.Method
+import com.mesosphere.cosmos.raml.Body
+import com.mesosphere.cosmos.raml.DataType
+import com.mesosphere.cosmos.raml.Response
 
 object ApiTest extends App {
   case class World(w: Int, o: String, r: Int)
@@ -40,92 +48,45 @@ object ApiTest extends App {
     "helloworld object description"
   }
 
-  implicit val uriSchemafier = Schemafier.schemafyString.as[Uri]
-
-  implicit val packageRepositorySchemafier = {
-    ObjectSchemafier.deriveFor[PackageRepository].decorateProperties {
-      case ("name", schemafier) =>
-        schemafier.withDescription("Unique name for the repository")
-      case ("uri", schemafier) =>
-        schemafier.withDescription(
-          "HTTP URL for the repository. The URL must resolve to a Zip file defined by " +
-          "https://github.com/mesosphere/universe/blob/version-2.x/README.md"
-        )
-    }
-  }
-
-  implicit val packageRepositoryListResponseSchemafier = {
-    ObjectSchemafier.deriveFor[PackageRepositoryListResponse].decorateProperties {
-      case ("repositories", schemafier) =>
-        schemafier.withDescription("List of repositories")
-    }
-  }
-
-  implicit val packageRepositoryListRequestSchemafier = {
-    ObjectSchemafier.deriveFor[PackageRepositoryListRequest]
-  }
-
-  val resource = Json.fromFields(
-    List(
-      ("title", Json.string("Cosmos API")),
+  val resource = Document(
+    "Cosmos API",
+    Map(
       (
         "/package/repo/list",
-        Json.fromFields(
-          List(
-            (
-              "post",
-              Json.fromFields(
-                List(
-                  ("description", Json.string("List configured Universe repositories")),
-                  (
-                    "body",
-                    Json.fromFields(
-                      List(
-                        (
-                          MediaTypes.PackageRepositoryListRequest.show, Json.fromFields(
-                            List(
-                              (
-                                "schema",
-                                Json.string(
-                                  Json.fromJsonObject(
-                                    packageRepositoryListRequestSchemafier.schema
-                                  ).toString
-                                )
-                              )
-                            )
-                          )
+        Resource(
+          post=Some(
+            Method(
+              description=Some("List configured Universe repositories"),
+              body=Some(
+                Body(
+                  Map(
+                    (
+                      MediaTypes.PackageRepositoryListRequest,
+                      DataType(
+                        Some(
+                          Json.fromJsonObject(
+                            PackageRepositoryListRequestSchemafier.schema
+                          ).toString
                         )
                       )
                     )
-                  ),
-                  ("responses",
-                    Json.fromFields(
-                      List(
-                        (
-                          "200",
-                          Json.fromFields(
-                            List(
-                              (
-                                "body",
-                                Json.fromFields(
-                                  List(
-                                    (
-                                      MediaTypes.PackageRepositoryListResponse.show,
-                                      Json.fromFields(
-                                        List(
-                                          (
-                                            "schema",
-                                            Json.string(
-                                              Json.fromJsonObject(
-                                                packageRepositoryListResponseSchemafier.schema
-                                              ).toString
-                                            )
-                                          )
-                                        )
-                                      )
-                                    )
-                                  )
-                                )
+                  )
+                )
+              ),
+              responses=Map(
+                (
+                  Status.Ok,
+                  Response(
+                    body=Some(
+                      Body(
+                        Map(
+                          (
+                            MediaTypes.PackageRepositoryListRequest,
+                            DataType(
+                              Some(
+                                Json.fromJsonObject(
+                                  PackageRepositoryListResponseSchemafier.schema
+                                ).toString
                               )
                             )
                           )
