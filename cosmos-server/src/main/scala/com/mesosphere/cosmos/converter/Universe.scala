@@ -427,4 +427,16 @@ object Universe {
     Injection.build(fwd)(rev)
   }
 
+  implicit val internalPackageDefinitionToUniverseV2PackageDetails: Conversion[
+    internal.model.PackageDefinition, universe.v2.model.PackageDetails] =
+    Conversion.fromFunction { (x: internal.model.PackageDefinition) =>
+      universe.v2.model.PackageDetails(
+        packagingVersion = x.packagingVersion.as[universe.v2.model.PackagingVersion],
+        name = x.name,
+        version = x.version.as[universe.v2.model.PackageDetailsVersion],
+        maintainer = x.maintainer,
+        description = x.description
+      )
+    }
+
 }
