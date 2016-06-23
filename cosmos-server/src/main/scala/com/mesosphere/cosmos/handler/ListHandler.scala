@@ -42,16 +42,16 @@ private[cosmos] final class ListHandler(
                   .get,
                 repositoryUri
               ).map { packageInfo =>
-                packageInfo.getOrElse {
+                val packageInformation = packageInfo.getOrElse {
                   val b64PkgInfo = app.packageMetadata.getOrElse("")
                   val pkgInfoBytes = Base64.getDecoder.decode(b64PkgInfo)
                   val pkgInfoString =
                     new String(pkgInfoBytes, StandardCharsets.UTF_8)
                   decodePackageFromMarathon(pkgInfoString)
                 }
-              }.map(packageInformation =>
-                    Some(
-                        rpc.v1.model.Installation(app.id, packageInformation)))
+
+                Some(rpc.v1.model.Installation(app.id, packageInformation))
+              }
             case _ =>
               // TODO: log debug message when one of them is Some.
               Future.value(None)
