@@ -18,16 +18,14 @@ trait CosmosRepository extends PackageCollection {
   def repository: rpc.v1.model.PackageRepository
 
   def getPackageByReleaseVersion(
-    packageName: String,
-    releaseVersion: universe.v3.model.PackageDefinition.ReleaseVersion
+      packageName: String,
+      releaseVersion: universe.v3.model.PackageDefinition.ReleaseVersion
   )(implicit session: RequestSession): Future[internal.model.PackageDefinition]
-
 }
 
 object CosmosRepository {
   def apply(repository: rpc.v1.model.PackageRepository,
-            universeClient: UniverseClient)
-    : CosmosRepository = {
+            universeClient: UniverseClient): DefaultCosmosRepository = {
     new DefaultCosmosRepository(repository, universeClient)
   }
 }
@@ -36,7 +34,7 @@ final class DefaultCosmosRepository(
     override val repository: rpc.v1.model.PackageRepository,
     universeClient: UniverseClient
 )
-  extends CosmosRepository {
+    extends CosmosRepository {
 
   private[this] val lastRepository = new AtomicReference(
       Option.empty[(internal.model.CosmosInternalRepository, LocalDateTime)])
@@ -44,7 +42,8 @@ final class DefaultCosmosRepository(
   override def getPackageByReleaseVersion(
       packageName: String,
       releaseVersion: universe.v3.model.PackageDefinition.ReleaseVersion
-  )(implicit session: RequestSession): Future[internal.model.PackageDefinition] = {
+  )(implicit session: RequestSession)
+    : Future[internal.model.PackageDefinition] = {
     synchronizedUpdate().map { internalRepository =>
       internalRepository.packages.find { pkg =>
         pkg.name == packageName && pkg.releaseVersion == releaseVersion
@@ -57,7 +56,8 @@ final class DefaultCosmosRepository(
   override def getPackageByPackageVersion(
       packageName: String,
       packageVersion: Option[universe.v3.model.PackageDefinition.Version]
-  )(implicit session: RequestSession): Future[(internal.model.PackageDefinition, Uri)] = {
+  )(implicit session: RequestSession)
+    : Future[(internal.model.PackageDefinition, Uri)] = {
     synchronizedUpdate().map { internalRepository =>
       internalRepository.packages.find { pkg =>
         pkg.name == packageName &&
@@ -72,7 +72,8 @@ final class DefaultCosmosRepository(
 
   override def getPackagesByPackageName(
       packageName: String
-  )(implicit session: RequestSession): Future[List[internal.model.PackageDefinition]] = {
+  )(implicit session: RequestSession)
+    : Future[List[internal.model.PackageDefinition]] = {
     synchronizedUpdate().map { internalRepository =>
       internalRepository.packages.filter(_.name == packageName)
     }
@@ -80,7 +81,8 @@ final class DefaultCosmosRepository(
 
   override def search(
       query: Option[String]
-  )(implicit session: RequestSession): Future[List[rpc.v1.model.SearchResult]] = {
+  )(implicit session: RequestSession)
+    : Future[List[rpc.v1.model.SearchResult]] = {
     val predicate =
       query.map { value =>
         if (value.contains("*")) {
@@ -108,14 +110,16 @@ final class DefaultCosmosRepository(
                       pkg.selected,
                       pkg.resource.flatMap(_.images)))
 
-            val releaseVersion = searchResult.versions.get(pkg.version).map { releaseVersion =>
-              releaseVersion max pkg.releaseVersion
-            } getOrElse {
-              pkg.releaseVersion
-            }
+            val releaseVersion =
+              searchResult.versions.get(pkg.version).map { releaseVersion =>
+                releaseVersion max pkg.releaseVersion
+              } getOrElse {
+                pkg.releaseVersion
+              }
 
             val newSearchResult = searchResult.copy(
-              versions=searchResult.versions + ((pkg.version, releaseVersion))
+                versions =
+                  searchResult.versions + ((pkg.version, releaseVersion))
             )
 
             state + ((pkg.name, newSearchResult))
@@ -126,24 +130,27 @@ final class DefaultCosmosRepository(
     }
   }
 
+  def packages(implicit session: RequestSession)
+    : Future[List[internal.model.PackageDefinition]] = {
+    synchronizedUpdate().map(_.packages)
+  }
+
   private[this] def synchronizedUpdate()(
-    implicit session: RequestSession
+      implicit session: RequestSession
   ): Future[internal.model.CosmosInternalRepository] = {
     lastRepository.get() match {
       case Some((internalRepository, lastModified)) =>
         if (lastModified.plusMinutes(1).isBefore(LocalDateTime.now())) {
-          universeClient(repository).onSuccess {
-            newRepository =>
-              lastRepository.set(Some((newRepository, LocalDateTime.now())))
+          universeClient(repository).onSuccess { newRepository =>
+            lastRepository.set(Some((newRepository, LocalDateTime.now())))
           }
         } else {
           Future(internalRepository)
         }
 
       case None =>
-        universeClient(repository).onSuccess {
-          newRepository =>
-            lastRepository.set(Some((newRepository, LocalDateTime.now())))
+        universeClient(repository).onSuccess { newRepository =>
+          lastRepository.set(Some((newRepository, LocalDateTime.now())))
         }
     }
   }
