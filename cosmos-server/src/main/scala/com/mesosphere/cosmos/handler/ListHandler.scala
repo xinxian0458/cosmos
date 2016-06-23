@@ -24,7 +24,9 @@ import scala.util.Try
 private[cosmos] final class ListHandler(
     adminRouter: AdminRouter,
     repositories: (Uri) => Future[Option[CosmosRepository]]
-) extends EndpointHandler[rpc.v1.model.ListRequest, rpc.v1.model.ListResponse] {
+)
+    extends EndpointHandler[
+        rpc.v1.model.ListRequest, rpc.v1.model.ListResponse] {
 
   override def apply(request: rpc.v1.model.ListRequest)(
       implicit session: RequestSession): Future[rpc.v1.model.ListResponse] = {
@@ -36,11 +38,11 @@ private[cosmos] final class ListHandler(
                 if request.packageName.forall(_ == packageName) &&
                 request.appId.forall(_ == app.id) =>
               installedPackageInformation(
-                packageName,
-                releaseVersion
-                  .as[Try[universe.v3.model.PackageDefinition.ReleaseVersion]]
-                  .get,
-                repositoryUri
+                  packageName,
+                  releaseVersion
+                    .as[Try[universe.v3.model.PackageDefinition.ReleaseVersion]]
+                    .get,
+                  repositoryUri
               ).map { packageInfo =>
                 val packageInformation = packageInfo.getOrElse {
                   val b64PkgInfo = app.packageMetadata.getOrElse("")
@@ -76,18 +78,23 @@ private[cosmos] final class ListHandler(
       packageName: String,
       releaseVersion: universe.v3.model.PackageDefinition.ReleaseVersion,
       repositoryUri: Uri
-  )(implicit session: RequestSession): Future[Option[rpc.v1.model.InstalledPackageInformation]] = {
+  )(implicit session: RequestSession)
+    : Future[Option[rpc.v1.model.InstalledPackageInformation]] = {
     repositories(repositoryUri).flatMap {
       case Some(repository) =>
         repository
           .getPackageByReleaseVersion(packageName, releaseVersion)
           .map { pkg =>
             // TODO(version): The package definition conversion can throw: IllegalArgumentException
-            Some(rpc.v1.model.InstalledPackageInformation(
-              packageDefinition = pkg.as[Try[universe.v3.model.PackageDefinition]]
-                .map(_.as[universe.v2.model.PackageDetails]).get,
-              resourceDefinition = pkg.resource.as[Option[universe.v2.model.Resource]]
-            ))
+            Some(
+                rpc.v1.model.InstalledPackageInformation(
+                    packageDefinition = pkg
+                      .as[Try[universe.v3.model.PackageDefinition]]
+                      .map(_.as[universe.v2.model.PackageDetails])
+                      .get,
+                    resourceDefinition =
+                      pkg.resource.as[Option[universe.v2.model.Resource]]
+                ))
           }
       case _ => Future.value(None)
     }
