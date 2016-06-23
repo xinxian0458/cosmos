@@ -82,8 +82,10 @@ private[cosmos] final class ListHandler(
         repository
           .getPackageByReleaseVersion(packageName, releaseVersion)
           .map { pkg =>
+            // TODO(version): The package definition conversion can throw: IllegalArgumentException
             Some(rpc.v1.model.InstalledPackageInformation(
-              packageDefinition = pkg.as[universe.v2.model.PackageDetails],
+              packageDefinition = pkg.as[Try[universe.v3.model.PackageDefinition]]
+                .map(_.as[universe.v2.model.PackageDetails]).get,
               resourceDefinition = pkg.resource.as[Option[universe.v2.model.Resource]]
             ))
           }

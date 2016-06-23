@@ -51,6 +51,7 @@ object Universe {
     Injection.build(fwd)(rev)
   }
 
+  // TODO(version): We should use Conversion if we are throwing unconditionally
   implicit val v3V2PackagingVersionToPackageDefinition: Injection[
       universe.v3.model.PackageDefinition, universe.v2.model.PackageDetails] = {
     Injection.build { (value: universe.v3.model.PackageDefinition) =>
@@ -65,6 +66,7 @@ object Universe {
     }
   }
 
+  // TODO(version): We should use Conversion if we are throwing unconditionally
   implicit val v3V3PackageToV2PackageDetails: Injection[
       universe.v3.model.V3Package, universe.v2.model.PackageDetails] = {
     Injection.build { (value: universe.v3.model.V3Package) =>
@@ -91,6 +93,7 @@ object Universe {
     }
   }
 
+  // TODO(version): We should use Conversion if we are throwing unconditionally
   implicit val v3V2PackageToV2PackageDetails: Injection[
       universe.v3.model.V2Package, universe.v2.model.PackageDetails] = {
     Injection.build { (value: universe.v3.model.V2Package) =>
@@ -325,6 +328,7 @@ object Universe {
     }
   }
 
+  // TODO(version): We should use Conversion if we are throwing unconditionally
   implicit val v3V3ResourceToV2Resource: Injection[
       universe.v3.model.V3Resource, universe.v2.model.Resource] = {
     Injection.build { (value: universe.v3.model.V3Resource) =>
@@ -426,17 +430,4 @@ object Universe {
 
     Injection.build(fwd)(rev)
   }
-
-  implicit val internalPackageDefinitionToUniverseV2PackageDetails: Conversion[
-    internal.model.PackageDefinition, universe.v2.model.PackageDetails] =
-    Conversion.fromFunction { (x: internal.model.PackageDefinition) =>
-      universe.v2.model.PackageDetails(
-        packagingVersion = x.packagingVersion.as[universe.v2.model.PackagingVersion],
-        name = x.name,
-        version = x.version.as[universe.v2.model.PackageDetailsVersion],
-        maintainer = x.maintainer,
-        description = x.description
-      )
-    }
-
 }
