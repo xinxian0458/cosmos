@@ -1,6 +1,6 @@
 [
   {
-    "name": "Universe",
-    "uri": "https://universe.mesosphere.com/repo"
+    "name": "Linker Universe",
+    "uri": "http://master.mesos:8082/repo-1.7"
   }
 ]
